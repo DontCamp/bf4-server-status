@@ -29,7 +29,7 @@ font-size:95%;
 }
 </style>
 <meta http-equiv="refresh" content="{{refresh}}" >
-{{player_count}} player(s) on {{current_map}}.
+{{player_count}} player(s) on {{current_map}} {{current_mode}}.
 <table style="width:270px">
     <tr>
         <td>Player</td>
@@ -77,6 +77,22 @@ map_names = {'MP_Abandoned': 'Zavod 311',
              'XP3_UrbanGdn': 'Lumphini Garden',
              'XP3_WtrFront': 'Sunken Dragon'}
 
+# Mapping engine map modes to human-readable names
+game_modes = {'8388608': 'Air Superiority',
+              '524288': 'Capture the Flag',
+              '134217728': 'Carrier Assault',
+              '67108864': 'Carrier Assault Large',
+              '34359738368': 'Chain Link',
+              '64': 'Conquest',
+              '16777216': 'Defuse',
+              '1024': 'Domination',
+              '2097152': 'Obliteration',
+              '68719476736': 'Obliteration Competitive',
+              '2': 'Rush',
+              '8': 'Squad DM',
+              '32': 'Team DM'}
+
+
 # Put your URLs here
 server_url = ''
 file_dir = ''
@@ -114,13 +130,13 @@ def json_query(json_url):
             else:
                 continue
 
-def write_template(player_count, current_map, player_data):
+def write_template(player_count, current_map, current_mode, player_data):
     write_file(os.path.join(file_dir + 'player_count.html'), player_count)
     update_time = time.strftime('%H:%M:%S %m/%d/%Y')
     t = Template(template)
     c = Context({"player_count": player_count,
                  "current_map": current_map,
-                 "map_names": map_names,
+                 "current_mode": current_mode,
                  "refresh": refresh,
                  "update_time": update_time,
                  "player_data": player_data})
@@ -130,19 +146,21 @@ def server_status(server_url):
     server_json = json_query(server_url)
     try:
         current_map_id = server_json['message']['SERVER_INFO']['map']
+        current_mode_id = server_json['message']['SERVER_INFO']['mapMode']
         player_count_json = server_json['message']['SERVER_INFO']['slots']['2']['current']
     except TypeError:
         if debug:
             print 'Unable to query battlelog'
         sys.exit(1)
     current_map = map_names[current_map_id]
+    current_mode = game_modes[current_mode_id]
     player_count = str(player_count_json)
     player_list = []
     for x in range(0, len(server_json['message']['SERVER_PLAYERS'])):
         player_list.append(server_json['message']['SERVER_PLAYERS'][x]['persona']['user']['username'])
     if debug:
         print 'Player count: ' + player_count
-    return player_list, player_count, current_map
+    return player_list, player_count, current_map, current_mode
 
 def bf4db_query(player_list):
     player_dict = SortedDict()
@@ -173,4 +191,4 @@ cmdline()
 get_lock('bf4_server_status.py')
 players = server_status(server_url)
 player_data = bf4db_query(players[0])
-write_template(players[1], players[2], player_data)
+write_template(players[1], players[2], players[3], player_data)
