@@ -71,7 +71,11 @@ map_names = {'MP_Abandoned': 'Zavod 311',
              'XP2_001': 'Lost Islands',
              'XP2_002': 'Nansha strike',
              'XP2_003': 'WaveBreaker',
-             'XP2_004': 'Operation Mortar'}
+             'XP2_004': 'Operation Mortar',
+             'XP3_MarketPl': 'Pearl Market',
+             'XP3_Prpganda': 'Propaganda',
+             'XP3_UrbanGdn': 'Lumphini Garden',
+             'XP3_WtrFront': 'Sunken Dragon'}
 
 # Put your URLs here
 server_url = ''
