@@ -7,6 +7,7 @@
 Usage: bf4_server_status.py [--debug]
 '''
 
+import argparse
 import urllib
 import json
 import os
@@ -93,12 +94,6 @@ game_modes = {'8388608': 'Air Superiority',
               '32': 'Team DM'}
 
 
-# Put your URLs here
-server_url = ''
-file_dir = ''
-refresh = 60
-bf4db_url = 'http://api.bf4db.com/api-player.php?name='
-
 # Generic way to write our files
 def write_file(filename, text):
     with open(filename, 'w') as f:
@@ -131,7 +126,7 @@ def json_query(json_url):
                 continue
 
 def write_template(player_count, current_map, current_mode, player_data):
-    write_file(os.path.join(file_dir + 'player_count.html'), player_count)
+    write_file(os.path.join(file_dir + '/player_count.html'), player_count)
     update_time = time.strftime('%H:%M:%S %m/%d/%Y')
     t = Template(template)
     c = Context({"player_count": player_count,
@@ -140,7 +135,7 @@ def write_template(player_count, current_map, current_mode, player_data):
                  "refresh": refresh,
                  "update_time": update_time,
                  "player_data": player_data})
-    write_file(os.path.join(file_dir + 'index.html'), t.render(c))
+    write_file(os.path.join(file_dir + '/index.html'), t.render(c))
 
 def server_status(server_url):
     server_json = json_query(server_url)
@@ -177,17 +172,28 @@ def bf4db_query(player_list):
 
 def cmdline():
     global debug
-    try:
-        arg = sys.argv[1]
-        if arg == '--debug':
-            debug = True
-        else:
-            print __doc__
-            sys.exit(1)
-    except IndexError:
+    global server_id
+    global file_dir
+    parser = argparse.ArgumentParser(description='Status web page for your BF4 server.')
+    parser.add_argument('-d', help='show debug info in terminal',
+                        action="store_true")
+    parser.add_argument('server_id', help='Battlelog server ID')
+    parser.add_argument('file_dir', help='Path to generated HTML file(s)')
+    args = parser.parse_args()
+    server_id = args.server_id
+    file_dir = args.file_dir
+    if args.d:
+        debug = True
+    else:
         debug = False
 
 cmdline()
+
+# Put your URLs here
+server_url = 'http://battlelog.battlefield.com/bf4/servers/show/PC/' + server_id + '/?json=1'
+refresh = 60
+bf4db_url = 'http://api.bf4db.com/api-player.php?name='
+
 get_lock('bf4_server_status.py')
 players = server_status(server_url)
 player_data = bf4db_query(players[0])
