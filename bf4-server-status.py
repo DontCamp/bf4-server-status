@@ -144,7 +144,7 @@ def write_template(player_count, current_map, current_mode, player_data):
                  "player_data": player_data})
     write_file(os.path.join(file_dir + '/index.html'), t.render(c))
 
-def server_status(address):
+def server_status(address, server_port=None):
     def recv(sock):
         # Pull enough to get the int headers and instantiate a Packet
         out = sock.recv(12)
@@ -155,42 +155,34 @@ def server_status(address):
         while len(out) < packet_size:
             out += sock.recv(1)
         return out
-    
-    #try:
-    #    port = int(sys.argv[2])
-    #except IndexError:
-    
-    port = 47200
-    
+
+    try:
+        port = int(server_port)
+    except TypeError:
+        port = 47200
+
     server = address, port
-    
+
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect(server)
-    
+
     serverinfo = Packet(1, False, True, 'serverinfo')
     sock.sendall(serverinfo.to_buffer())
-    
+
     response = Packet.from_buffer(recv(sock))
     serverinfo = response.words
-    
+
     listplayers = Packet(2, False, True, 'listPlayers all')
     sock.sendall(listplayers.to_buffer())
     response = Packet.from_buffer(recv(sock))
     listplayers = response.words
-    
+
     sock.close()
 
     # Need both of these to go on
     assert serverinfo[0] == 'OK'
     assert listplayers[0] == 'OK'
-    
-    # Print out pretty server name/players
-    print 'server name: ' + serverinfo[1]
-    print 'players : ' + serverinfo[2]
-    print 'maxplayers : ' + serverinfo[3]
-    print 'mode : ' + serverinfo[4]
-    print 'map : ' + serverinfo[5]
-    print
+
     # Chomp on the listplayers output and loop out some namedtuples
     num_fields, the_rest = int(listplayers[1]), listplayers[2:]
     fields, num_players, players = (
@@ -198,24 +190,32 @@ def server_status(address):
         the_rest[num_fields],
         the_rest[num_fields + 1:]
     )
-    
+
     Player = namedtuple('Player', fields)
-    
+
     player_list = list()
     while players:
         player_list.append(Player(*players[:num_fields]))
         players = players[num_fields:]
-    
-    print
+
     little_player_list = list()
     for x in player_list:
         little_player_list.append(x[0])
-    print little_player_list
+        if debug and len(little_player_list) > 1:
+            break
+
+    # Print out pretty server name/players
+    if debug:
+        print 'server name: ' + serverinfo[1]
+        print 'players : ' + serverinfo[2]
+        print 'maxplayers : ' + serverinfo[3]
+        print 'mode : ' + serverinfo[4]
+        print 'map : ' + serverinfo[5]
+
+    player_count = serverinfo[2] + '/' + serverinfo[3]
     current_map = map_names[serverinfo[5]]
     current_mode = game_modes[serverinfo[4]]
-    if debug:
-        print 'Player count: ' + player_count
-    return little_player_list, serverinfo[2], current_map, current_mode
+    return little_player_list, player_count, current_map, current_mode
 
 def bf4db_query(player_list):
     player_dict = SortedDict()
@@ -233,11 +233,13 @@ def bf4db_query(player_list):
 def cmdline():
     global debug
     global address
+    global server_port
     global file_dir
     parser = argparse.ArgumentParser(description='Status web page for your BF4 server.')
     parser.add_argument('-d', help='show debug info in terminal',
                         action="store_true")
-    parser.add_argument('address', help='Battlelog server ID')
+    parser.add_argument('address', help='Server hostname or IP address')
+    parser.add_argument('-p', type=int, help='Server port number')
     parser.add_argument('file_dir', help='Path to generated HTML file(s)')
     args = parser.parse_args()
     address = args.address
@@ -246,6 +248,10 @@ def cmdline():
         debug = True
     else:
         debug = False
+    if args.p:
+        server_port = args.p
+    else:
+        server_port = None
 
 cmdline()
 
@@ -254,6 +260,6 @@ refresh = 60
 bf4db_url = 'http://api.bf4db.com/api-player.php?name='
 
 get_lock('bf4_server_status.py')
-players = server_status(address)
+players = server_status(address, server_port)
 player_data = bf4db_query(players[0])
 write_template(players[1], players[2], players[3], player_data)
