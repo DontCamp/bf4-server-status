@@ -86,20 +86,19 @@ map_names = {'MP_Abandoned': 'Zavod 311',
              'XP3_WtrFront': 'Sunken Dragon'}
 
 # Mapping engine map modes to human-readable names
-game_modes = {'8388608': 'Air Superiority',
-              '524288': 'Capture the Flag',
-              '134217728': 'Carrier Assault',
-              '67108864': 'Carrier Assault Large',
-              '34359738368': 'Chain Link',
-              '64': 'Conquest',
-              '16777216': 'Defuse',
-              '1024': 'Domination',
-              '2097152': 'Obliteration',
-              '68719476736': 'Obliteration Competitive',
-              '2': 'Rush',
+game_modes = {'AirSuperiority0': 'Air Superiority',
+              'CaptureTheFlag0': 'Capture the Flag',
+              'CarrierAssaultSmall0': 'Carrier Assault',
+              'CarrierAssaultLarge0': 'Carrier Assault Large',
+              'Chainlink0': 'Chain Link',
+              'ConquestSmall0': 'Conquest Small',
+              'ConquestLarge0': 'Conquest Large',
+              'Elimination0': 'Defuse',
+              'Domination0': 'Domination',
+              'Obliteration': 'Obliteration',
               'RushLarge0': 'Rush',
-              '8': 'Squad DM',
-              '32': 'Team DM'}
+              'SquadDeathMatch0': 'Squad DM',
+              'TeamDeathMatch0': 'Team DM'}
 
 
 # Generic way to write our files
