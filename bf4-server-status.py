@@ -12,7 +12,7 @@ import socket
 import sys
 from collections import namedtuple
 
-from frostbite_wire.packet import Packet
+from lib.frostbite_wire.packet import Packet
 
 import argparse
 import urllib
