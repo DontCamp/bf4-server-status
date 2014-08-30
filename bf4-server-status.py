@@ -7,6 +7,13 @@
 Usage: bf4_server_status.py [--debug]
 '''
 
+
+import socket
+import sys
+from collections import namedtuple
+
+from frostbite_wire.packet import Packet
+
 import argparse
 import urllib
 import json
@@ -90,6 +97,7 @@ game_modes = {'8388608': 'Air Superiority',
               '2097152': 'Obliteration',
               '68719476736': 'Obliteration Competitive',
               '2': 'Rush',
+              'RushLarge0': 'Rush',
               '8': 'Squad DM',
               '32': 'Team DM'}
 
@@ -137,25 +145,78 @@ def write_template(player_count, current_map, current_mode, player_data):
                  "player_data": player_data})
     write_file(os.path.join(file_dir + '/index.html'), t.render(c))
 
-def server_status(server_url):
-    server_json = json_query(server_url)
-    try:
-        current_map_id = server_json['message']['SERVER_INFO']['map']
-        current_mode_id = server_json['message']['SERVER_INFO']['mapMode']
-        player_count_json = server_json['message']['SERVER_INFO']['slots']['2']['current']
-    except TypeError:
-        if debug:
-            print 'Unable to query battlelog'
-        sys.exit(1)
-    current_map = map_names[current_map_id]
-    current_mode = game_modes[current_mode_id]
-    player_count = str(player_count_json)
-    player_list = []
-    for x in range(0, len(server_json['message']['SERVER_PLAYERS'])):
-        player_list.append(server_json['message']['SERVER_PLAYERS'][x]['persona']['user']['username'])
+def server_status(address):
+    def recv(sock):
+        # Pull enough to get the int headers and instantiate a Packet
+        out = sock.recv(12)
+        p = Packet.from_buffer(out)
+        packet_size = len(p)
+        # Pull one character at a time until we've recv'd
+        # up to the reported size
+        while len(out) < packet_size:
+            out += sock.recv(1)
+        return out
+    
+    #try:
+    #    port = int(sys.argv[2])
+    #except IndexError:
+    
+    port = 47200
+    
+    server = address, port
+    
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect(server)
+    
+    serverinfo = Packet(1, False, True, 'serverinfo')
+    sock.sendall(serverinfo.to_buffer())
+    
+    response = Packet.from_buffer(recv(sock))
+    serverinfo = response.words
+    
+    listplayers = Packet(2, False, True, 'listPlayers all')
+    sock.sendall(listplayers.to_buffer())
+    response = Packet.from_buffer(recv(sock))
+    listplayers = response.words
+    
+    sock.close()
+
+    # Need both of these to go on
+    assert serverinfo[0] == 'OK'
+    assert listplayers[0] == 'OK'
+    
+    # Print out pretty server name/players
+    print 'server name: ' + serverinfo[1]
+    print 'players : ' + serverinfo[2]
+    print 'maxplayers : ' + serverinfo[3]
+    print 'mode : ' + serverinfo[4]
+    print 'map : ' + serverinfo[5]
+    print
+    # Chomp on the listplayers output and loop out some namedtuples
+    num_fields, the_rest = int(listplayers[1]), listplayers[2:]
+    fields, num_players, players = (
+        the_rest[:num_fields],
+        the_rest[num_fields],
+        the_rest[num_fields + 1:]
+    )
+    
+    Player = namedtuple('Player', fields)
+    
+    player_list = list()
+    while players:
+        player_list.append(Player(*players[:num_fields]))
+        players = players[num_fields:]
+    
+    print
+    little_player_list = list()
+    for x in player_list:
+        little_player_list.append(x[0])
+    print little_player_list
+    current_map = map_names[serverinfo[5]]
+    current_mode = game_modes[serverinfo[4]]
     if debug:
         print 'Player count: ' + player_count
-    return player_list, player_count, current_map, current_mode
+    return little_player_list, serverinfo[2], current_map, current_mode
 
 def bf4db_query(player_list):
     player_dict = SortedDict()
@@ -172,15 +233,15 @@ def bf4db_query(player_list):
 
 def cmdline():
     global debug
-    global server_id
+    global address
     global file_dir
     parser = argparse.ArgumentParser(description='Status web page for your BF4 server.')
     parser.add_argument('-d', help='show debug info in terminal',
                         action="store_true")
-    parser.add_argument('server_id', help='Battlelog server ID')
+    parser.add_argument('address', help='Battlelog server ID')
     parser.add_argument('file_dir', help='Path to generated HTML file(s)')
     args = parser.parse_args()
-    server_id = args.server_id
+    address = args.address
     file_dir = args.file_dir
     if args.d:
         debug = True
@@ -190,11 +251,10 @@ def cmdline():
 cmdline()
 
 # Put your URLs here
-server_url = 'http://battlelog.battlefield.com/bf4/servers/show/PC/' + server_id + '/?json=1'
 refresh = 60
 bf4db_url = 'http://api.bf4db.com/api-player.php?name='
 
 get_lock('bf4_server_status.py')
-players = server_status(server_url)
+players = server_status(address)
 player_data = bf4db_query(players[0])
 write_template(players[1], players[2], players[3], player_data)
