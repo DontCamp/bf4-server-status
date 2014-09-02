@@ -13,9 +13,6 @@ import time
 from django.template import Template, Context
 from django.conf import settings
 from django.utils.datastructures import SortedDict
-# We have to do this to use django templates standalone - see
-# http://stackoverflow.com/questions/98135/how-do-i-use-django-templates-without-the-rest-of-django
-settings.configure()
 
 # Our template. Could just as easily be stored in a separate file
 template = """
@@ -228,7 +225,7 @@ def bf4db_query(player_list):
     return player_dict
 
 
-class CommandLine:
+class CommandLine(object):
     def __init__(self):
         self.debug = False
         self.address = ''
@@ -260,6 +257,15 @@ process_lock = ProcessLock()
 process_lock.get_lock('bf4_server_status.py')
 refresh = 60
 bf4db_url = 'http://api.bf4db.com/api-player.php?name='
-players = server_status(cmdline.address, cmdline.server_port)
-player_data = bf4db_query(players[0])
-write_template(players[1], players[2], players[3], player_data)
+
+
+def _main():
+    # We have to do this to use django templates standalone - see
+    # http://stackoverflow.com/questions/98135/how-do-i-use-django-templates-without-the-rest-of-django
+    settings.configure()
+    little_player_list, player_count, current_map, current_mode = server_status(cmdline.address, cmdline.server_port)
+    player_data = bf4db_query(little_player_list)
+    write_template(player_count, current_map, current_mode, player_data)
+
+if __name__ == '__main__':
+    _main()
