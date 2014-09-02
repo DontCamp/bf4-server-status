@@ -239,7 +239,7 @@ def cmdline():
     parser.add_argument('-d', help='show debug info in terminal',
                         action="store_true")
     parser.add_argument('address', help='Server hostname or IP address')
-    parser.add_argument('-p', type=int, help='Server port number')
+    parser.add_argument('-p', '--port', type=int, help='Server port number')
     parser.add_argument('file_dir', help='Path to generated HTML file(s)')
     args = parser.parse_args()
     address = args.address
