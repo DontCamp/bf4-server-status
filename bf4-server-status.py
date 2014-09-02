@@ -1,19 +1,8 @@
 #!/usr/bin/env python
-# debian deps:
-# python-django
-
-'''Get BF4 server data and output to HTML
-
-Usage: bf4_server_status.py [--debug]
-'''
-
-
 import socket
 import sys
 from collections import namedtuple
-
 from lib.frostbite_wire.packet import Packet
-
 import argparse
 import urllib
 import json
@@ -107,14 +96,15 @@ def write_file(filename, text):
         f.write(text)
 
 # http://stackoverflow.com/questions/788411/check-to-see-if-python-script-is-running
-def get_lock(process_name):
-    global lock_socket
-    lock_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-    try:
-        lock_socket.bind('\0' + process_name)
-    except socket.error:
-        print 'already running.  exiting.'
-        sys.exit()
+class ProcessLock:
+    def __init__(self):
+        self.lock_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+    def get_lock(self, process_name):
+        try:
+            self.lock_socket.bind('\0' + process_name)
+        except socket.error:
+            print 'already running.  exiting.'
+            sys.exit()
 
 def json_query(json_url):
     retry_limit = range(1,6)
@@ -133,7 +123,7 @@ def json_query(json_url):
                 continue
 
 def write_template(player_count, current_map, current_mode, player_data):
-    write_file(os.path.join(file_dir + '/player_count.html'), player_count)
+    write_file(os.path.join(cmdline.file_dir + '/player_count.html'), player_count)
     update_time = time.strftime('%H:%M:%S %m/%d/%Y')
     t = Template(template)
     c = Context({"player_count": player_count,
@@ -142,7 +132,7 @@ def write_template(player_count, current_map, current_mode, player_data):
                  "refresh": refresh,
                  "update_time": update_time,
                  "player_data": player_data})
-    write_file(os.path.join(file_dir + '/index.html'), t.render(c))
+    write_file(os.path.join(cmdline.file_dir + '/index.html'), t.render(c))
 
 def server_status(address, server_port=None):
     def recv(sock):
@@ -201,11 +191,11 @@ def server_status(address, server_port=None):
     little_player_list = list()
     for x in player_list:
         little_player_list.append(x[0])
-        if debug and len(little_player_list) > 1:
+        if cmdline.debug and len(little_player_list) > 1:
             break
 
     # Print out pretty server name/players
-    if debug:
+    if cmdline.debug:
         print 'server name: ' + serverinfo[1]
         print 'players : ' + serverinfo[2]
         print 'maxplayers : ' + serverinfo[3]
@@ -226,40 +216,42 @@ def bf4db_query(player_list):
             player_dict[x] = bf4db_json['data']
         except ValueError:
             player_dict[x] = None
-        if debug:
+        if cmdline.debug:
             print x + ' ' + str(player_dict[x]['cheatscore'])
     return player_dict
 
-def cmdline():
-    global debug
-    global address
-    global server_port
-    global file_dir
-    parser = argparse.ArgumentParser(description='Status web page for your BF4 server.')
-    parser.add_argument('-d', help='show debug info in terminal',
-                        action="store_true")
-    parser.add_argument('address', help='Server hostname or IP address')
-    parser.add_argument('-p', '--port', type=int, help='Server port number')
-    parser.add_argument('file_dir', help='Path to generated HTML file(s)')
-    args = parser.parse_args()
-    address = args.address
-    file_dir = args.file_dir
-    if args.d:
-        debug = True
-    else:
-        debug = False
-    if args.p:
-        server_port = args.p
-    else:
-        server_port = None
+class CommandLine:
+    def __init__(self):
+        self.debug = False
+        self.address = ''
+        self.server_port = None
+        self.file_dir = ''
 
-cmdline()
+    def cmdline(self):
+        parser = argparse.ArgumentParser(description='Status web page for your BF4 server.')
+        parser.add_argument('-d', help='show debug info in terminal',
+                            action="store_true")
+        parser.add_argument('address', help='Server hostname or IP address')
+        parser.add_argument('-p', '--port', type=int, help='Server port number')
+        parser.add_argument('file_dir', help='Path to generated HTML file(s)')
+        args = parser.parse_args()
+        self.address = args.address
+        self.file_dir = args.file_dir
+        if args.d:
+            self.debug = True
+        else:
+            self.debug = False
+        if args.port:
+            self.server_port = args.port
+        else:
+            self.server_port = None
 
-# Put your URLs here
+cmdline = CommandLine()
+cmdline.cmdline()
+process_lock = ProcessLock()
+process_lock.get_lock('bf4_server_status.py')
 refresh = 60
 bf4db_url = 'http://api.bf4db.com/api-player.php?name='
-
-get_lock('bf4_server_status.py')
-players = server_status(address, server_port)
+players = server_status(cmdline.address, cmdline.server_port)
 player_data = bf4db_query(players[0])
 write_template(players[1], players[2], players[3], player_data)
