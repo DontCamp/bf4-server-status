@@ -13,8 +13,9 @@ import time
 from django.template import Template, Context
 from django.conf import settings
 from django.utils.datastructures import SortedDict
-settings.configure() # We have to do this to use django templates standalone - see
+# We have to do this to use django templates standalone - see
 # http://stackoverflow.com/questions/98135/how-do-i-use-django-templates-without-the-rest-of-django
+settings.configure()
 
 # Our template. Could just as easily be stored in a separate file
 template = """
@@ -95,10 +96,12 @@ def write_file(filename, text):
     with open(filename, 'w') as f:
         f.write(text)
 
+
 # http://stackoverflow.com/questions/788411/check-to-see-if-python-script-is-running
 class ProcessLock:
     def __init__(self):
         self.lock_socket = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+
     def get_lock(self, process_name):
         try:
             self.lock_socket.bind('\0' + process_name)
@@ -106,8 +109,9 @@ class ProcessLock:
             print 'already running.  exiting.'
             sys.exit()
 
+
 def json_query(json_url):
-    retry_limit = range(1,6)
+    retry_limit = range(1, 6)
     for x in retry_limit:
         try:
             result_json = json.load(urllib.urlopen(json_url))
@@ -122,6 +126,7 @@ def json_query(json_url):
             else:
                 continue
 
+
 def write_template(player_count, current_map, current_mode, player_data):
     write_file(os.path.join(cmdline.file_dir + '/player_count.html'), player_count)
     update_time = time.strftime('%H:%M:%S %m/%d/%Y')
@@ -133,6 +138,7 @@ def write_template(player_count, current_map, current_mode, player_data):
                  "update_time": update_time,
                  "player_data": player_data})
     write_file(os.path.join(cmdline.file_dir + '/index.html'), t.render(c))
+
 
 def server_status(address, server_port=None):
     def recv(sock):
@@ -207,6 +213,7 @@ def server_status(address, server_port=None):
     current_mode = game_modes[serverinfo[4]]
     return little_player_list, player_count, current_map, current_mode
 
+
 def bf4db_query(player_list):
     player_dict = SortedDict()
     for x in sorted(player_list, key=lambda s: s.lower()):
@@ -219,6 +226,7 @@ def bf4db_query(player_list):
         if cmdline.debug:
             print x + ' ' + str(player_dict[x]['cheatscore'])
     return player_dict
+
 
 class CommandLine:
     def __init__(self):
