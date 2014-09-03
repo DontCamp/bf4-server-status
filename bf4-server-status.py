@@ -16,10 +16,31 @@ from django.conf import settings
 from django.utils.datastructures import SortedDict
 
 
-# Generic way to write our files
-def write_file(filename, text):
-    with open(filename, 'w') as f:
-        f.write(text)
+class CommandLine:
+    def __init__(self):
+        self.debug = False
+        self.address = ''
+        self.server_port = None
+        self.file_dir = ''
+
+    def cmdline(self):
+        parser = argparse.ArgumentParser(description='Status web page for your BF4 server.')
+        parser.add_argument('-d', help='show debug info in terminal',
+                            action="store_true")
+        parser.add_argument('address', help='Server hostname or IP address')
+        parser.add_argument('-p', '--port', type=int, help='Server port number')
+        parser.add_argument('file_dir', help='Path to generated HTML file(s)')
+        args = parser.parse_args()
+        self.address = args.address
+        self.file_dir = args.file_dir
+        if args.d:
+            self.debug = True
+        else:
+            self.debug = False
+        if args.port:
+            self.server_port = args.port
+        else:
+            self.server_port = None
 
 
 # http://stackoverflow.com/questions/788411/check-to-see-if-python-script-is-running
@@ -32,64 +53,6 @@ class ProcessLock:
             self.lock_socket.bind('\0' + process_name)
         except socket.error:
             sys.exit('already running.  exiting.')
-
-
-def json_query(json_url):
-    retry_limit = range(1, 6)
-    for x in retry_limit:
-        try:
-            result_json = json.load(urllib.urlopen(json_url))
-            return result_json
-        except:
-            print 'query failed - URL was ' + json_url
-            print 'attempting retry ' + str(x) + ' of ' + str(retry_limit[-1])
-            time.sleep(1)
-            if x >= retry_limit[-1]:
-                sys.exit('giving up.  exiting.')
-            else:
-                continue
-
-
-def write_template(player_count, current_map, current_mode, player_data, file_dir, refresh):
-    # Our template. Could just as easily be stored in a separate file
-    template = """
-    <style>
-    table,th,td
-    {
-    border:1px solid black;
-    font-size:95%;
-    }
-    </style>
-    <meta http-equiv="refresh" content="{{refresh}}" >
-    {{player_count}} player(s) on {{current_map}} {{current_mode}}.
-    <table style="width:270px">
-        <tr>
-            <td>Player</td>
-            <td>Cheat Score</td>
-        </tr>
-        {% for key, value in player_data.items %}
-        <tr>
-            <td><a href="http://battlelog.battlefield.com/bf4/soldier/{{key}}/stats/{{value.personaId}}/pc/">{{key}}</a></td>
-            {% if value.cheatscore < 10 or value.cheatscore == None %}
-                <td><a href="{{value.bf4db_url}}">{{value.cheatscore}}</a></td>
-            {% else %}
-                <td bgcolor="red"><a href="{{value.bf4db_url}}">{{value.cheatscore}}</a></td>
-            {% endif %}
-        </tr>
-        {% endfor %}
-    </table>
-    Last updated at {{update_time}} UTC.
-    """
-    write_file(os.path.join(file_dir + '/player_count.html'), player_count)
-    update_time = time.strftime('%H:%M:%S %m/%d/%Y')
-    t = Template(template)
-    c = Context({"player_count": player_count,
-                 "current_map": current_map,
-                 "current_mode": current_mode,
-                 "refresh": refresh,
-                 "update_time": update_time,
-                 "player_data": player_data})
-    write_file(os.path.join(file_dir + '/index.html'), t.render(c))
 
 
 def server_status(address, server_port=None, debug=False):
@@ -209,6 +172,22 @@ def server_status(address, server_port=None, debug=False):
     return little_player_list, player_count, current_map, current_mode
 
 
+def json_query(json_url):
+    retry_limit = range(1, 6)
+    for x in retry_limit:
+        try:
+            result_json = json.load(urllib.urlopen(json_url))
+            return result_json
+        except:
+            print 'query failed - URL was ' + json_url
+            print 'attempting retry ' + str(x) + ' of ' + str(retry_limit[-1])
+            time.sleep(1)
+            if x >= retry_limit[-1]:
+                sys.exit('giving up.  exiting.')
+            else:
+                continue
+
+
 def bf4db_query(player_list, bf4db_url, debug=False):
     player_dict = SortedDict()
     for x in sorted(player_list, key=lambda s: s.lower()):
@@ -223,31 +202,52 @@ def bf4db_query(player_list, bf4db_url, debug=False):
     return player_dict
 
 
-class CommandLine:
-    def __init__(self):
-        self.debug = False
-        self.address = ''
-        self.server_port = None
-        self.file_dir = ''
+# Generic way to write our files
+def write_file(filename, text):
+    with open(filename, 'w') as f:
+        f.write(text)
 
-    def cmdline(self):
-        parser = argparse.ArgumentParser(description='Status web page for your BF4 server.')
-        parser.add_argument('-d', help='show debug info in terminal',
-                            action="store_true")
-        parser.add_argument('address', help='Server hostname or IP address')
-        parser.add_argument('-p', '--port', type=int, help='Server port number')
-        parser.add_argument('file_dir', help='Path to generated HTML file(s)')
-        args = parser.parse_args()
-        self.address = args.address
-        self.file_dir = args.file_dir
-        if args.d:
-            self.debug = True
-        else:
-            self.debug = False
-        if args.port:
-            self.server_port = args.port
-        else:
-            self.server_port = None
+
+def write_template(player_count, current_map, current_mode, player_data, file_dir, refresh):
+    # Our template. Could just as easily be stored in a separate file
+    template = """
+    <style>
+    table,th,td
+    {
+    border:1px solid black;
+    font-size:95%;
+    }
+    </style>
+    <meta http-equiv="refresh" content="{{refresh}}" >
+    {{player_count}} player(s) on {{current_map}} {{current_mode}}.
+    <table style="width:270px">
+        <tr>
+            <td>Player</td>
+            <td>Cheat Score</td>
+        </tr>
+        {% for key, value in player_data.items %}
+        <tr>
+            <td><a href="http://battlelog.battlefield.com/bf4/soldier/{{key}}/stats/{{value.personaId}}/pc/">{{key}}</a></td>
+            {% if value.cheatscore < 10 or value.cheatscore == None %}
+                <td><a href="{{value.bf4db_url}}">{{value.cheatscore}}</a></td>
+            {% else %}
+                <td bgcolor="red"><a href="{{value.bf4db_url}}">{{value.cheatscore}}</a></td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+    </table>
+    Last updated at {{update_time}} UTC.
+    """
+    write_file(os.path.join(file_dir + '/player_count.html'), player_count)
+    update_time = time.strftime('%H:%M:%S %m/%d/%Y')
+    t = Template(template)
+    c = Context({"player_count": player_count,
+                 "current_map": current_map,
+                 "current_mode": current_mode,
+                 "refresh": refresh,
+                 "update_time": update_time,
+                 "player_data": player_data})
+    write_file(os.path.join(file_dir + '/index.html'), t.render(c))
 
 
 def _main():
