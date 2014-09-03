@@ -238,7 +238,7 @@ def write_template(player_count, current_map, current_mode, player_data, file_di
     </table>
     Last updated at {{update_time}} UTC.
     """
-    write_file(os.path.join(file_dir + '/player_count.html'), player_count)
+    write_file(os.path.join(file_dir, 'player_count.html'), player_count)
     update_time = time.strftime('%H:%M:%S %m/%d/%Y')
     t = Template(template)
     c = Context({"player_count": player_count,
@@ -247,7 +247,7 @@ def write_template(player_count, current_map, current_mode, player_data, file_di
                  "refresh": refresh,
                  "update_time": update_time,
                  "player_data": player_data})
-    write_file(os.path.join(file_dir + '/index.html'), t.render(c))
+    write_file(os.path.join(file_dir, 'index.html'), t.render(c))
 
 
 def _main():
