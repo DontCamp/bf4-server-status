@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 import socket
 import sys
 from collections import namedtuple
@@ -13,79 +14,6 @@ import time
 from django.template import Template, Context
 from django.conf import settings
 from django.utils.datastructures import SortedDict
-
-# Our template. Could just as easily be stored in a separate file
-template = """
-<style>
-table,th,td
-{
-border:1px solid black;
-font-size:95%;
-}
-</style>
-<meta http-equiv="refresh" content="{{refresh}}" >
-{{player_count}} player(s) on {{current_map}} {{current_mode}}.
-<table style="width:270px">
-    <tr>
-        <td>Player</td>
-        <td>Cheat Score</td>
-    </tr>
-    {% for key, value in player_data.items %}
-    <tr>
-        <td><a href="http://battlelog.battlefield.com/bf4/soldier/{{key}}/stats/{{value.personaId}}/pc/">{{key}}</a></td>
-        {% if value.cheatscore < 10 or value.cheatscore == None %}
-            <td><a href="{{value.bf4db_url}}">{{value.cheatscore}}</a></td>
-        {% else %}
-            <td bgcolor="red"><a href="{{value.bf4db_url}}">{{value.cheatscore}}</a></td>
-        {% endif %}
-    </tr>
-    {% endfor %}
-</table>
-Last updated at {{update_time}} UTC.
-"""
-
-# Mapping engine map names to human-readable names
-map_names = {'MP_Abandoned': 'Zavod 311',
-             'MP_Damage': 'Lancang Dam',
-             'MP_Flooded': 'Flood Zone',
-             'MP_Journey': 'Golmud Railway',
-             'MP_Naval': 'Paracel Storm',
-             'MP_Prison': 'Operation Locker',
-             'MP_Resort': 'Hainan Resort',
-             'MP_Siege': 'Siege of Shanghai',
-             'MP_TheDish': 'Rogue Transmission',
-             'MP_Tremors': 'Dawnbreaker',
-             'XP1_001': 'Silk Road',
-             'XP1_002': 'Altai Range',
-             'XP1_003': 'Guilin Peaks',
-             'XP1_004': 'Dragon Pass',
-             'XP0_Caspian': 'Caspian Border',
-             'XP0_Firestorm': 'Operation Firestorm',
-             'XP0_Metro': 'Operation Metro',
-             'XP0_Oman': 'Gulf of Oman',
-             'XP2_001': 'Lost Islands',
-             'XP2_002': 'Nansha strike',
-             'XP2_003': 'WaveBreaker',
-             'XP2_004': 'Operation Mortar',
-             'XP3_MarketPl': 'Pearl Market',
-             'XP3_Prpganda': 'Propaganda',
-             'XP3_UrbanGdn': 'Lumphini Garden',
-             'XP3_WtrFront': 'Sunken Dragon'}
-
-# Mapping engine map modes to human-readable names
-game_modes = {'AirSuperiority0': 'Air Superiority',
-              'CaptureTheFlag0': 'Capture the Flag',
-              'CarrierAssaultSmall0': 'Carrier Assault',
-              'CarrierAssaultLarge0': 'Carrier Assault Large',
-              'Chainlink0': 'Chain Link',
-              'ConquestSmall0': 'Conquest Small',
-              'ConquestLarge0': 'Conquest Large',
-              'Elimination0': 'Defuse',
-              'Domination0': 'Domination',
-              'Obliteration': 'Obliteration',
-              'RushLarge0': 'Rush',
-              'SquadDeathMatch0': 'Squad DM',
-              'TeamDeathMatch0': 'Team DM'}
 
 
 # Generic way to write our files
@@ -103,8 +31,7 @@ class ProcessLock:
         try:
             self.lock_socket.bind('\0' + process_name)
         except socket.error:
-            print 'already running.  exiting.'
-            sys.exit()
+            sys.exit('already running.  exiting.')
 
 
 def json_query(json_url):
@@ -124,8 +51,37 @@ def json_query(json_url):
                 continue
 
 
-def write_template(player_count, current_map, current_mode, player_data):
-    write_file(os.path.join(cmdline.file_dir + '/player_count.html'), player_count)
+def write_template(player_count, current_map, current_mode, player_data, file_dir, refresh):
+    # Our template. Could just as easily be stored in a separate file
+    template = """
+    <style>
+    table,th,td
+    {
+    border:1px solid black;
+    font-size:95%;
+    }
+    </style>
+    <meta http-equiv="refresh" content="{{refresh}}" >
+    {{player_count}} player(s) on {{current_map}} {{current_mode}}.
+    <table style="width:270px">
+        <tr>
+            <td>Player</td>
+            <td>Cheat Score</td>
+        </tr>
+        {% for key, value in player_data.items %}
+        <tr>
+            <td><a href="http://battlelog.battlefield.com/bf4/soldier/{{key}}/stats/{{value.personaId}}/pc/">{{key}}</a></td>
+            {% if value.cheatscore < 10 or value.cheatscore == None %}
+                <td><a href="{{value.bf4db_url}}">{{value.cheatscore}}</a></td>
+            {% else %}
+                <td bgcolor="red"><a href="{{value.bf4db_url}}">{{value.cheatscore}}</a></td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+    </table>
+    Last updated at {{update_time}} UTC.
+    """
+    write_file(os.path.join(file_dir + '/player_count.html'), player_count)
     update_time = time.strftime('%H:%M:%S %m/%d/%Y')
     t = Template(template)
     c = Context({"player_count": player_count,
@@ -134,10 +90,53 @@ def write_template(player_count, current_map, current_mode, player_data):
                  "refresh": refresh,
                  "update_time": update_time,
                  "player_data": player_data})
-    write_file(os.path.join(cmdline.file_dir + '/index.html'), t.render(c))
+    write_file(os.path.join(file_dir + '/index.html'), t.render(c))
 
 
-def server_status(address, server_port=None):
+def server_status(address, server_port=None, debug=False):
+    # Mapping engine map names to human-readable names
+    map_names = {'MP_Abandoned': 'Zavod 311',
+                 'MP_Damage': 'Lancang Dam',
+                 'MP_Flooded': 'Flood Zone',
+                 'MP_Journey': 'Golmud Railway',
+                 'MP_Naval': 'Paracel Storm',
+                 'MP_Prison': 'Operation Locker',
+                 'MP_Resort': 'Hainan Resort',
+                 'MP_Siege': 'Siege of Shanghai',
+                 'MP_TheDish': 'Rogue Transmission',
+                 'MP_Tremors': 'Dawnbreaker',
+                 'XP1_001': 'Silk Road',
+                 'XP1_002': 'Altai Range',
+                 'XP1_003': 'Guilin Peaks',
+                 'XP1_004': 'Dragon Pass',
+                 'XP0_Caspian': 'Caspian Border',
+                 'XP0_Firestorm': 'Operation Firestorm',
+                 'XP0_Metro': 'Operation Metro',
+                 'XP0_Oman': 'Gulf of Oman',
+                 'XP2_001': 'Lost Islands',
+                 'XP2_002': 'Nansha strike',
+                 'XP2_003': 'WaveBreaker',
+                 'XP2_004': 'Operation Mortar',
+                 'XP3_MarketPl': 'Pearl Market',
+                 'XP3_Prpganda': 'Propaganda',
+                 'XP3_UrbanGdn': 'Lumphini Garden',
+                 'XP3_WtrFront': 'Sunken Dragon'}
+
+    # Mapping engine map modes to human-readable names
+    game_modes = {'AirSuperiority0': 'Air Superiority',
+                  'CaptureTheFlag0': 'Capture the Flag',
+                  'CarrierAssaultSmall0': 'Carrier Assault',
+                  'CarrierAssaultLarge0': 'Carrier Assault Large',
+                  'Chainlink0': 'Chain Link',
+                  'ConquestSmall0': 'Conquest Small',
+                  'ConquestLarge0': 'Conquest Large',
+                  'Elimination0': 'Defuse',
+                  'Domination0': 'Domination',
+                  'Obliteration': 'Obliteration',
+                  'RushLarge0': 'Rush',
+                  'SquadDeathMatch0': 'Squad DM',
+                  'TeamDeathMatch0': 'Team DM'}
+
     def recv(sock):
         # Pull enough to get the int headers and instantiate a Packet
         out = sock.recv(12)
@@ -194,11 +193,11 @@ def server_status(address, server_port=None):
     little_player_list = list()
     for x in player_list:
         little_player_list.append(x[0])
-        if cmdline.debug and len(little_player_list) > 1:
+        if debug and len(little_player_list) > 1:
             break
 
     # Print out pretty server name/players
-    if cmdline.debug:
+    if debug:
         print 'server name: ' + serverinfo[1]
         print 'players : ' + serverinfo[2]
         print 'maxplayers : ' + serverinfo[3]
@@ -211,7 +210,7 @@ def server_status(address, server_port=None):
     return little_player_list, player_count, current_map, current_mode
 
 
-def bf4db_query(player_list):
+def bf4db_query(player_list, bf4db_url, debug=False):
     player_dict = SortedDict()
     for x in sorted(player_list, key=lambda s: s.lower()):
         time.sleep(0.5)
@@ -220,7 +219,7 @@ def bf4db_query(player_list):
             player_dict[x] = bf4db_json['data']
         except ValueError:
             player_dict[x] = None
-        if cmdline.debug:
+        if debug:
             print x + ' ' + str(player_dict[x]['cheatscore'])
     return player_dict
 
@@ -251,21 +250,20 @@ class CommandLine(object):
         else:
             self.server_port = None
 
-cmdline = CommandLine()
-cmdline.cmdline()
-process_lock = ProcessLock()
-process_lock.get_lock('bf4_server_status.py')
-refresh = 60
-bf4db_url = 'http://api.bf4db.com/api-player.php?name='
-
 
 def _main():
+    cmdline = CommandLine()
+    cmdline.cmdline()
+    process_lock = ProcessLock()
+    process_lock.get_lock('bf4_server_status.py')
+    refresh = 60
+    bf4db_url = 'http://api.bf4db.com/api-player.php?name='
     # We have to do this to use django templates standalone - see
     # http://stackoverflow.com/questions/98135/how-do-i-use-django-templates-without-the-rest-of-django
     settings.configure()
-    little_player_list, player_count, current_map, current_mode = server_status(cmdline.address, cmdline.server_port)
-    player_data = bf4db_query(little_player_list)
-    write_template(player_count, current_map, current_mode, player_data)
+    little_player_list, player_count, current_map, current_mode = server_status(cmdline.address, cmdline.server_port, cmdline.debug)
+    player_data = bf4db_query(little_player_list, bf4db_url, cmdline.debug)
+    write_template(player_count, current_map, current_mode, player_data, cmdline.file_dir, refresh)
 
 if __name__ == '__main__':
     _main()
