@@ -45,8 +45,7 @@ def json_query(json_url):
             print 'attempting retry ' + str(x) + ' of ' + str(retry_limit[-1])
             time.sleep(1)
             if x >= retry_limit[-1]:
-                print 'giving up.  exiting.'
-                sys.exit(1)
+                sys.exit('giving up.  exiting.')
             else:
                 continue
 
