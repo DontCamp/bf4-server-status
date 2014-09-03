@@ -224,7 +224,7 @@ def bf4db_query(player_list, bf4db_url, debug=False):
     return player_dict
 
 
-class CommandLine(object):
+class CommandLine():
     def __init__(self):
         self.debug = False
         self.address = ''
