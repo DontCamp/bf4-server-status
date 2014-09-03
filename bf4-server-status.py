@@ -169,7 +169,8 @@ def server_status(address, server_port=None, debug=False):
     player_count = serverinfo[2] + '/' + serverinfo[3]
     current_map = map_names[serverinfo[5]]
     current_mode = game_modes[serverinfo[4]]
-    return little_player_list, player_count, current_map, current_mode
+    server_name = serverinfo[1]
+    return little_player_list, player_count, current_map, current_mode, server_name
 
 
 def json_query(json_url):
@@ -208,7 +209,7 @@ def write_file(filename, text):
         f.write(text)
 
 
-def write_template(player_count, current_map, current_mode, player_data, file_dir, refresh):
+def write_template(player_count, current_map, current_mode, player_data, server_name, file_dir, refresh):
     # Our template. Could just as easily be stored in a separate file
     template = """
     <style>
@@ -219,6 +220,7 @@ def write_template(player_count, current_map, current_mode, player_data, file_di
     }
     </style>
     <meta http-equiv="refresh" content="{{refresh}}" >
+    {{server_name}}<br>
     {{player_count}} player(s) on {{current_map}} {{current_mode}}.
     <table style="width:270px">
         <tr>
@@ -246,7 +248,8 @@ def write_template(player_count, current_map, current_mode, player_data, file_di
                  "current_mode": current_mode,
                  "refresh": refresh,
                  "update_time": update_time,
-                 "player_data": player_data})
+                 "player_data": player_data,
+                 "server_name": server_name})
     write_file(os.path.join(file_dir, 'index.html'), t.render(c))
 
 
@@ -260,9 +263,9 @@ def _main():
     # We have to do this to use django templates standalone - see
     # http://stackoverflow.com/questions/98135/how-do-i-use-django-templates-without-the-rest-of-django
     settings.configure()
-    little_player_list, player_count, current_map, current_mode = server_status(cmdline.address, cmdline.server_port, cmdline.debug)
+    little_player_list, player_count, current_map, current_mode, server_name = server_status(cmdline.address, cmdline.server_port, cmdline.debug)
     player_data = bf4db_query(little_player_list, bf4db_url, cmdline.debug)
-    write_template(player_count, current_map, current_mode, player_data, cmdline.file_dir, refresh)
+    write_template(player_count, current_map, current_mode, player_data, server_name, cmdline.file_dir, refresh)
 
 if __name__ == '__main__':
     _main()
