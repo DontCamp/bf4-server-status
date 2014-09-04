@@ -16,6 +16,5 @@ optional arguments:
   -p PORT, --port PORT  Server port number</pre>
   
 Installation:
-* `pip install django`
-* `pip install pbr`
+* `pip install django pbr`
 * Clone frostbite-wire module into `lib` subdirectory
