@@ -1,6 +1,6 @@
 bf4-server-status
 =================
-A simple status page for your Battlefield 4 server that's updated every couple of minutes with server title, player count, player list, bf4db.com cheat score, and links to player profiles.  Good for monitoring your server with a mobile device!
+A simple status page for your Battlefield 4 server that's updated every couple of minutes with server title, map/game mode, player count, player list, bf4db.com cheat score, and links to player profiles.  Good for monitoring your server with a mobile device!
 
 <pre>usage: bf4-server-status.py [-h] [-d] [-p PORT] address file_dir
 
