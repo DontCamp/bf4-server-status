@@ -18,4 +18,4 @@ optional arguments:
 Installation:
 * `pip install django`
 * `pip install pbr`
-* Clone frostbite-wire module into 'lib' subdirectory
+* Clone frostbite-wire module into `lib` subdirectory
