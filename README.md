@@ -16,5 +16,5 @@ optional arguments:
   -p PORT, --port PORT  Server port number</pre>
   
 Installation:
+* `git clone --recursive https://github.com/robled/bf4-server-status.git`
 * `pip install django pbr`
-* Clone frostbite-wire module into `lib` subdirectory
