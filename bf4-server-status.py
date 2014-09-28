@@ -5,7 +5,7 @@ import sys
 from collections import namedtuple
 from lib.frostbite_wire.packet import Packet
 import argparse
-import urllib
+import urllib2
 import json
 import os
 import socket
@@ -174,32 +174,34 @@ def server_status(address, server_port=None, debug=False):
 
 
 def json_query(json_url):
-    retry_limit = range(1, 6)
+    retry_limit = range(1, 2)
     for x in retry_limit:
+        if x >= retry_limit[-1]:
+            break
         try:
-            result_json = json.load(urllib.urlopen(json_url))
+            result_json = json.load(urllib2.urlopen(json_url), None, 2)
             return result_json
         except:
             print 'query failed - URL was ' + json_url
             print 'attempting retry ' + str(x) + ' of ' + str(retry_limit[-1])
-            time.sleep(1)
-            if x >= retry_limit[-1]:
-                sys.exit('giving up.  exiting.')
-            else:
-                continue
 
 
 def bf4db_query(player_list, bf4db_url, debug=False):
+    bf4db_up = True
     player_dict = SortedDict()
     for x in sorted(player_list, key=lambda s: s.lower()):
-        time.sleep(0.5)
-        try:
-            bf4db_json = json_query(bf4db_url + x)
-            player_dict[x] = bf4db_json['data']
-        except ValueError:
-            player_dict[x] = None
-        if debug:
-            print x + ' ' + str(player_dict[x]['cheatscore'])
+        if bf4db_up == True:
+            time.sleep(0.3)
+            try:
+                bf4db_json = json_query(bf4db_url + x)
+                player_dict[x] = bf4db_json['data']
+                if debug:
+                    print x + ' ' + str(player_dict[x]['cheatscore'])
+            except:
+                bf4db_up = False
+        else:
+            # reset the player dictionary since bf4db is down
+            player_dict = {}
     return player_dict
 
 
