@@ -5,9 +5,9 @@ import sys
 from collections import namedtuple
 from lib.frostbite_wire.packet import Packet
 import argparse
-import urllib2
 import json
 import os
+import requests
 import socket
 import sys
 import time
@@ -155,8 +155,6 @@ def server_status(address, server_port=None, debug=False):
     little_player_list = list()
     for x in player_list:
         little_player_list.append(x[0])
-        if debug and len(little_player_list) > 1:
-            break
 
     # Print out pretty server name/players
     if debug:
@@ -174,13 +172,13 @@ def server_status(address, server_port=None, debug=False):
 
 
 def json_query(json_url):
-    retry_limit = range(1, 2)
+    retry_limit = range(1, 3)
     for x in retry_limit:
         if x >= retry_limit[-1]:
             break
         try:
-            result_json = json.load(urllib2.urlopen(json_url), None, 2)
-            return result_json
+            r = requests.get(json_url, timeout=10)
+            return r.json()
         except:
             print 'query failed - URL was ' + json_url
             print 'attempting retry ' + str(x) + ' of ' + str(retry_limit[-1])
@@ -261,7 +259,7 @@ def _main():
     process_lock = ProcessLock()
     process_lock.get_lock('bf4_server_status.py')
     refresh = 60
-    bf4db_url = 'http://api.bf4db.com/api-player.php?name='
+    bf4db_url = 'http://api.bf4db.com/api-player.php?format=json&name='
     # We have to do this to use django templates standalone - see
     # http://stackoverflow.com/questions/98135/how-do-i-use-django-templates-without-the-rest-of-django
     settings.configure()
