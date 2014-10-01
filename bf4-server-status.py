@@ -206,7 +206,7 @@ def bf4db_query(player_list, bf4db_url, debug=False):
 # Generic way to write our files
 def write_file(filename, text):
     with open(filename, 'w') as f:
-        f.write(text)
+        f.write(text.encode('utf-8'))
 
 
 def write_template(player_count, current_map, current_mode, player_data, server_name, file_dir, refresh):
