@@ -86,7 +86,7 @@ def server_status(address, server_port=None, debug=False):
                  'XP4_Arctic': 'Operation Whiteout',
                  'XP4_SubBase': 'Hammerhead',
                  'XP4_Titan': 'Hangar 21',
-                 'XP4_Wlkrftry': 'Giants of Karelia'}
+                 'XP4_WlkrFtry': 'Giants of Karelia'}
 
     # Mapping engine map modes to human-readable names
     game_modes = {'AirSuperiority0': 'Air Superiority',
