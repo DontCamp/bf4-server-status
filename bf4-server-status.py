@@ -82,7 +82,11 @@ def server_status(address, server_port=None, debug=False):
                  'XP3_MarketPl': 'Pearl Market',
                  'XP3_Prpganda': 'Propaganda',
                  'XP3_UrbanGdn': 'Lumphini Garden',
-                 'XP3_WtrFront': 'Sunken Dragon'}
+                 'XP3_WtrFront': 'Sunken Dragon',
+                 'XP4_Arctic': 'Operation Whiteout',
+                 'XP4_SubBase': 'Hammerhead',
+                 'XP4_Titan': 'Hangar 21',
+                 'XP4_Wlkrftry': 'Giants of Karelia'}
 
     # Mapping engine map modes to human-readable names
     game_modes = {'AirSuperiority0': 'Air Superiority',
