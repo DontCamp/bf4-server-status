@@ -236,10 +236,12 @@ def write_template(player_count, current_map, current_mode, player_data, server_
                     {% for key, value in player_data.items %}
                     <tr>
                         <td><a href="http://battlelog.battlefield.com/bf4/soldier/{{key}}/stats/{{value.personaId}}/pc/">{{key}}</a></td>
-                        {% if value.cheatscore < 10 or value.cheatscore == None %}
-                            <td><a href="{{value.bf4db_url}}">{{value.cheatscore}}</a></td>
+                        {% if value.cheatscore < 1 or value.cheatscore == None %}
+                            <td><a href="{{value.bf4db_url}}" class="btn btn-default">{{value.cheatscore}}</a></td>
+                        {% elif value.cheatscore < 60 %}
+                            <td><a href="{{value.bf4db_url}}" class="btn btn-warning">{{value.cheatscore}}</a></td>
                         {% else %}
-                            <td bgcolor="red"><a href="{{value.bf4db_url}}">{{value.cheatscore}}</a></td>
+                            <td><a href="{{value.bf4db_url}}" class="btn btn-danger">{{value.cheatscore}}</a></td>
                         {% endif %}
                     </tr>
                     {% endfor %}
