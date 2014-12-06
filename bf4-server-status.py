@@ -220,33 +220,39 @@ def write_template(player_count, current_map, current_mode, player_data, server_
     <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
         <head>
             <meta charset="UTF-8">
-    	    <meta http-equiv="refresh" content="{{refresh}}" >
+            <meta http-equiv="refresh" content="{{refresh}}" >
             <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/{{bootstrap_version}}/css/bootstrap.min.css">
             <title>{{server_name}}</title>
         </head>
         <body>
             <div class="container">
-                <h3>{{server_name}}</h3>
-                <h3><small>{{player_count}} player(s) on {{current_map}} {{current_mode}}</small></h3>
-                <table class="table table-striped">
+                <h3>{{player_count}} player(s) on {{current_map}} {{current_mode}}</h3>
+                <table class="table table-striped table-condensed">
                     <tr>
+                        <th>Player</th>
+                        <th>Cheat Score</th>
                         <th>Player</th>
                         <th>Cheat Score</th>
                     </tr>
                     {% for key, value in player_data.items %}
+                    {% cycle 0 1 as cycle_num silent %}
+                    {% if cycle_num == 0 %}
                     <tr>
+                    {% endif %}
                         <td><a href="http://battlelog.battlefield.com/bf4/soldier/{{key}}/stats/{{value.personaId}}/pc/">{{key}}</a></td>
                         {% if value.cheatscore < 1 or value.cheatscore == None %}
-                            <td><a href="{{value.bf4db_url}}" class="btn btn-default">{{value.cheatscore}}</a></td>
+                            <td><a href="{{value.bf4db_url}}" class="btn btn-xs btn-default">{{value.cheatscore}}</a></td>
                         {% elif value.cheatscore < 60 %}
-                            <td><a href="{{value.bf4db_url}}" class="btn btn-warning">{{value.cheatscore}}</a></td>
+                            <td class="warning"><a href="{{value.bf4db_url}}" class="btn btn-xs btn-warning">{{value.cheatscore}}</a></td>
                         {% else %}
-                            <td><a href="{{value.bf4db_url}}" class="btn btn-danger">{{value.cheatscore}}</a></td>
+                            <td class="danger"><a href="{{value.bf4db_url}}" class="btn btn-xs btn-danger">{{value.cheatscore}}</a></td>
                         {% endif %}
+                    {% if cycle_num == 1 %}
                     </tr>
+                    {% endif %}
                     {% endfor %}
                 </table>
-                <p><small>Last updated at {{update_time}} UTC</small></p>
+                <p>Last updated at {{update_time}} UTC</p>
             </div>
             <script src="https://code.jquery.com/jquery.js"></script>
             <script src="https://netdna.bootstrapcdn.com/bootstrap/{{bootstrap_version}}/js/bootstrap.min.js"></script>
