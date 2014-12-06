@@ -2,7 +2,7 @@
 
 import socket
 import sys
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 from lib.frostbite_wire.packet import Packet
 import argparse
 import json
@@ -285,7 +285,13 @@ def _main():
     settings.configure()
     little_player_list, player_count, current_map, current_mode, server_name = server_status(cmdline.address, cmdline.server_port, cmdline.debug)
     player_data = bf4db_query(little_player_list, bf4db_url, cmdline.debug)
-    write_template(player_count, current_map, current_mode, player_data, server_name, cmdline.file_dir, refresh)
+    # Get a sorted list of keys based on cheatscore first, then the player name
+    player_data_sorted_keys = sorted(player_data.keys(), key=lambda k: str(player_data[k]['cheatscore']) + str(k).lower())
+    # rebuild player_data based on the sorted keys
+    sorted_player_data = OrderedDict()
+    for sorted_player in player_data_sorted_keys:
+        sorted_player_data[sorted_player] = player_data[sorted_player]
+    write_template(player_count, current_map, current_mode, sorted_player_data, server_name, cmdline.file_dir, refresh)
 
 if __name__ == '__main__':
     _main()
