@@ -216,33 +216,40 @@ def write_file(filename, text):
 def write_template(player_count, current_map, current_mode, player_data, server_name, file_dir, refresh):
     # Our template. Could just as easily be stored in a separate file
     template = """
-    <style>
-    table,th,td
-    {
-    border:1px solid black;
-    font-size:95%;
-    }
-    </style>
-    <meta http-equiv="refresh" content="{{refresh}}" >
-    {{server_name}}<br>
-    {{player_count}} player(s) on {{current_map}} {{current_mode}}.
-    <table style="width:270px">
-        <tr>
-            <td>Player</td>
-            <td>Cheat Score</td>
-        </tr>
-        {% for key, value in player_data.items %}
-        <tr>
-            <td><a href="http://battlelog.battlefield.com/bf4/soldier/{{key}}/stats/{{value.personaId}}/pc/">{{key}}</a></td>
-            {% if value.cheatscore < 10 or value.cheatscore == None %}
-                <td><a href="{{value.bf4db_url}}">{{value.cheatscore}}</a></td>
-            {% else %}
-                <td bgcolor="red"><a href="{{value.bf4db_url}}">{{value.cheatscore}}</a></td>
-            {% endif %}
-        </tr>
-        {% endfor %}
-    </table>
-    Last updated at {{update_time}} UTC.
+    <!DOCTYPE html>
+    <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+        <head>
+            <meta charset="UTF-8">
+    	    <meta http-equiv="refresh" content="{{refresh}}" >
+            <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/{{bootstrap_version}}/css/bootstrap.min.css">
+            <title>{{server_name}}</title>
+        </head>
+        <body>
+            <div class="container">
+                <h3>{{server_name}}</h3>
+                <h3><small>{{player_count}} player(s) on {{current_map}} {{current_mode}}</small></h3>
+                <table class="table table-striped">
+                    <tr>
+                        <th>Player</th>
+                        <th>Cheat Score</th>
+                    </tr>
+                    {% for key, value in player_data.items %}
+                    <tr>
+                        <td><a href="http://battlelog.battlefield.com/bf4/soldier/{{key}}/stats/{{value.personaId}}/pc/">{{key}}</a></td>
+                        {% if value.cheatscore < 10 or value.cheatscore == None %}
+                            <td><a href="{{value.bf4db_url}}">{{value.cheatscore}}</a></td>
+                        {% else %}
+                            <td bgcolor="red"><a href="{{value.bf4db_url}}">{{value.cheatscore}}</a></td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </table>
+                <p><small>Last updated at {{update_time}} UTC</small></p>
+            </div>
+            <script src="https://code.jquery.com/jquery.js"></script>
+            <script src="https://netdna.bootstrapcdn.com/bootstrap/{{bootstrap_version}}/js/bootstrap.min.js"></script>
+        </body>
+    </html>
     """
     write_file(os.path.join(file_dir, 'player_count.html'), player_count)
     update_time = time.strftime('%H:%M:%S %m/%d/%Y')
@@ -253,7 +260,8 @@ def write_template(player_count, current_map, current_mode, player_data, server_
                  "refresh": refresh,
                  "update_time": update_time,
                  "player_data": player_data,
-                 "server_name": server_name})
+                 "server_name": server_name,
+                 "bootstrap_version": '3.3.1'})
     write_file(os.path.join(file_dir, 'index.html'), t.render(c))
 
 
