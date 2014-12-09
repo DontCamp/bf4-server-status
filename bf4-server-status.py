@@ -2,7 +2,7 @@
 
 import socket
 import sys
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 from lib.frostbite_wire.packet import Packet
 import argparse
 import json
@@ -216,33 +216,48 @@ def write_file(filename, text):
 def write_template(player_count, current_map, current_mode, player_data, server_name, file_dir, refresh):
     # Our template. Could just as easily be stored in a separate file
     template = """
-    <style>
-    table,th,td
-    {
-    border:1px solid black;
-    font-size:95%;
-    }
-    </style>
-    <meta http-equiv="refresh" content="{{refresh}}" >
-    {{server_name}}<br>
-    {{player_count}} player(s) on {{current_map}} {{current_mode}}.
-    <table style="width:270px">
-        <tr>
-            <td>Player</td>
-            <td>Cheat Score</td>
-        </tr>
-        {% for key, value in player_data.items %}
-        <tr>
-            <td><a href="http://battlelog.battlefield.com/bf4/soldier/{{key}}/stats/{{value.personaId}}/pc/">{{key}}</a></td>
-            {% if value.cheatscore < 10 or value.cheatscore == None %}
-                <td><a href="{{value.bf4db_url}}">{{value.cheatscore}}</a></td>
-            {% else %}
-                <td bgcolor="red"><a href="{{value.bf4db_url}}">{{value.cheatscore}}</a></td>
-            {% endif %}
-        </tr>
-        {% endfor %}
-    </table>
-    Last updated at {{update_time}} UTC.
+    <!DOCTYPE html>
+    <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta http-equiv="refresh" content="{{refresh}}" >
+            <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/{{bootstrap_version}}/css/bootstrap.min.css">
+            <title>{{server_name}}</title>
+        </head>
+        <body>
+            <div class="container">
+                <h3>{{player_count}} player(s) on {{current_map}} {{current_mode}}</h3>
+                <table class="table table-striped table-condensed">
+                    <tr>
+                        <th>Player</th>
+                        <th>Cheat Score</th>
+                        <th>Player</th>
+                        <th>Cheat Score</th>
+                    </tr>
+                    {% for key, value in player_data.items %}
+                    {% cycle 0 1 as cycle_num silent %}
+                    {% if cycle_num == 0 %}
+                    <tr>
+                    {% endif %}
+                        <td><a href="http://battlelog.battlefield.com/bf4/soldier/{{key}}/stats/{{value.personaId}}/pc/">{{key}}</a></td>
+                        {% if value.cheatscore < 1 or value.cheatscore == None %}
+                            <td><a href="{{value.bf4db_url}}" class="btn btn-xs btn-default">{{value.cheatscore}}</a></td>
+                        {% elif value.cheatscore < 60 %}
+                            <td class="warning"><a href="{{value.bf4db_url}}" class="btn btn-xs btn-warning">{{value.cheatscore}}</a></td>
+                        {% else %}
+                            <td class="danger"><a href="{{value.bf4db_url}}" class="btn btn-xs btn-danger">{{value.cheatscore}}</a></td>
+                        {% endif %}
+                    {% if cycle_num == 1 %}
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </table>
+                <p>Last updated at {{update_time}} UTC</p>
+            </div>
+            <script src="https://code.jquery.com/jquery.js"></script>
+            <script src="https://netdna.bootstrapcdn.com/bootstrap/{{bootstrap_version}}/js/bootstrap.min.js"></script>
+        </body>
+    </html>
     """
     write_file(os.path.join(file_dir, 'player_count.html'), player_count)
     update_time = time.strftime('%H:%M:%S %m/%d/%Y')
@@ -253,7 +268,8 @@ def write_template(player_count, current_map, current_mode, player_data, server_
                  "refresh": refresh,
                  "update_time": update_time,
                  "player_data": player_data,
-                 "server_name": server_name})
+                 "server_name": server_name,
+                 "bootstrap_version": '3.3.1'})
     write_file(os.path.join(file_dir, 'index.html'), t.render(c))
 
 
@@ -269,7 +285,13 @@ def _main():
     settings.configure()
     little_player_list, player_count, current_map, current_mode, server_name = server_status(cmdline.address, cmdline.server_port, cmdline.debug)
     player_data = bf4db_query(little_player_list, bf4db_url, cmdline.debug)
-    write_template(player_count, current_map, current_mode, player_data, server_name, cmdline.file_dir, refresh)
+    # Get a sorted list of keys based on cheatscore first, then the player name
+    player_data_sorted_keys = sorted(player_data.keys(), key=lambda k: str(player_data[k]['cheatscore']) + str(k).lower())
+    # rebuild player_data based on the sorted keys
+    sorted_player_data = OrderedDict()
+    for sorted_player in player_data_sorted_keys:
+        sorted_player_data[sorted_player] = player_data[sorted_player]
+    write_template(player_count, current_map, current_mode, sorted_player_data, server_name, cmdline.file_dir, refresh)
 
 if __name__ == '__main__':
     _main()
