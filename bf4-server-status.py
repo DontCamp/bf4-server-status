@@ -1,17 +1,15 @@
 #!/usr/bin/env python
-
-import socket
-import sys
-from collections import namedtuple, OrderedDict
-from frostbite_wire.packet import Packet
 import argparse
-import json
 import os
-import requests
 import socket
 import sys
 import time
+from collections import namedtuple, OrderedDict
+
+import requests
+from frostbite_wire.packet import Packet
 from jinja2 import Template
+
 
 template = """
 <!DOCTYPE html>
@@ -234,7 +232,7 @@ def bf4db_query(player_list, bf4db_url, debug=False):
     bf4db_up = True
     player_dict = OrderedDict()
     for p in sorted(player_list, key=lambda k: k.name.lower()):
-        if bf4db_up == True:
+        if bf4db_up:
             time.sleep(0.3)
             try:
                 bf4db_json = json_query(bf4db_url + p.name)
@@ -257,7 +255,8 @@ def write_file(filename, text):
         f.write(text.encode('utf-8'))
 
 
-def write_template(player_count, current_map, current_mode, player_data, server_name, file_dir, refresh):
+def write_template(player_count, current_map, current_mode, player_data,
+        server_name, file_dir, refresh):
     # Our template. Could just as easily be stored in a separate file
     write_file(os.path.join(file_dir, 'player_count.html'), player_count)
     update_time = time.strftime('%H:%M:%S %m/%d/%Y')
@@ -269,15 +268,17 @@ def write_template(player_count, current_map, current_mode, player_data, server_
             team1_players[player] = player_data[player]
         elif player.teamId == '2':
             team2_players[player] = player_data[player]
-    context = {"player_count": player_count,
-                 "current_map": current_map,
-                 "current_mode": current_mode,
-                 "refresh": refresh,
-                 "update_time": update_time,
-                 "team1_players": team1_players,
-                 "team2_players": team2_players,
-                 "server_name": server_name,
-                 "bootstrap_version": '3.3.1'}
+    context = {
+        "player_count": player_count,
+        "current_map": current_map,
+        "current_mode": current_mode,
+        "refresh": refresh,
+        "update_time": update_time,
+        "team1_players": team1_players,
+        "team2_players": team2_players,
+        "server_name": server_name,
+        "bootstrap_version": '3.3.1',
+    }
     write_file(os.path.join(file_dir, 'index.html'), t.render(**context))
 
 
@@ -288,15 +289,18 @@ def _main():
     process_lock.get_lock('bf4_server_status.py')
     refresh = 60
     bf4db_url = 'http://api.bf4db.com/api-player.php?format=json&name='
-    player_list, player_count, current_map, current_mode, server_name = server_status(cmdline.address, cmdline.server_port, cmdline.debug)
+    player_list, player_count, current_map, current_mode, server_name = server_status(
+        cmdline.address, cmdline.server_port, cmdline.debug)
     player_data = bf4db_query(player_list, bf4db_url, cmdline.debug)
     # Get a sorted list of keys based on cheatscore first, then the player name
-    player_data_sorted_keys = sorted(player_data.keys(), key=lambda k: str(player_data[k]['cheatscore']) + str(k).lower())
+    player_data_sorted_keys = sorted(player_data.keys(),
+        key=lambda k: '%d%s' % (player_data[k]['cheatscore'], k.name.lower()))
     # rebuild player_data based on the sorted keys
     sorted_player_data = OrderedDict()
     for sorted_player in player_data_sorted_keys:
         sorted_player_data[sorted_player] = player_data[sorted_player]
-    write_template(player_count, current_map, current_mode, sorted_player_data, server_name, cmdline.file_dir, refresh)
+    write_template(player_count, current_map, current_mode, sorted_player_data, server_name,
+        cmdline.file_dir, refresh)
 
 if __name__ == '__main__':
     _main()
