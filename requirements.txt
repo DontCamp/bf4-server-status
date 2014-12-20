@@ -1,0 +1,4 @@
+django
+pbr
+requests
+-e git+https://github.com/seandst/frostbite-wire.git#egg=frostbite-wire

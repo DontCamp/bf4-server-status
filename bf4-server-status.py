@@ -1,19 +1,63 @@
 #!/usr/bin/env python
-
-import socket
-import sys
-from collections import namedtuple, OrderedDict
-from lib.frostbite_wire.packet import Packet
 import argparse
-import json
 import os
-import requests
 import socket
 import sys
 import time
-from django.template import Template, Context
-from django.conf import settings
-from django.utils.datastructures import SortedDict
+from collections import namedtuple, OrderedDict
+
+import requests
+from frostbite_wire.packet import Packet
+from jinja2 import Template
+
+
+template = """
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="refresh" content="{{refresh}}" >
+        <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/{{bootstrap_version}}/css/bootstrap.min.css">
+        <title>{{server_name}}</title>
+    </head>
+    <body>
+        <div class="container">
+            <h3>{{player_count}} player(s) on {{current_map}} {{current_mode}}</h3>
+            {% macro team_block(team, player_data) %}
+            <div class="col-xs-6">
+                <div class="panel panel-primary">
+                    <table class="table table-striped table-condensed">
+                        <tr>
+                            <th>Player</th>
+                            <th class="text-center">Cheat Score</th>
+                        </tr>
+                        {% for key, value in player_data.items() %}
+                        <tr>
+                            <td><a href="http://battlelog.battlefield.com/bf4/soldier/{{key.name}}/stats/{{value.personaId}}/pc/">{{key.name}}</a></td>
+                            {% if value.cheatscore < 1 or value.cheatscore == None %} {% set level="default" %}
+                            {% elif value.cheatscore < 60 %} {% set level="warning" %}
+                            {% else %} {% set level="danger" %}
+                            {% endif %}
+                            <td class="{{level}} text-center"><a href="{{value.bf4db_url}}" class="btn btn-xs btn-{{level}}">{{value.cheatscore}}</a></td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                    <div class="panel-heading"><strong>Team {{team}}</strong></div>
+                </div>
+            </div>
+            {% endmacro %}
+            {% for team, player_data in [(1, team1_players), (2, team2_players)] %}
+                {{ team_block(team, player_data) }}
+            {% endfor %}
+        </div>
+        <div class="container text-center">
+            <p>Last updated at {{update_time}} UTC</p>
+        </div>
+        <script src="https://code.jquery.com/jquery.js"></script>
+        <script src="https://netdna.bootstrapcdn.com/bootstrap/{{bootstrap_version}}/js/bootstrap.min.js"></script>
+    </body>
+</html>
+"""
 
 
 class CommandLine:
@@ -156,10 +200,6 @@ def server_status(address, server_port=None, debug=False):
         player_list.append(Player(*players[:num_fields]))
         players = players[num_fields:]
 
-    little_player_list = list()
-    for x in player_list:
-        little_player_list.append(x[0])
-
     # Print out pretty server name/players
     if debug:
         print 'server name: ' + serverinfo[1]
@@ -172,7 +212,7 @@ def server_status(address, server_port=None, debug=False):
     current_map = map_names[serverinfo[5]]
     current_mode = game_modes[serverinfo[4]]
     server_name = serverinfo[1]
-    return little_player_list, player_count, current_map, current_mode, server_name
+    return player_list, player_count, current_map, current_mode, server_name
 
 
 def json_query(json_url):
@@ -190,17 +230,19 @@ def json_query(json_url):
 
 def bf4db_query(player_list, bf4db_url, debug=False):
     bf4db_up = True
-    player_dict = SortedDict()
-    for x in sorted(player_list, key=lambda s: s.lower()):
-        if bf4db_up == True:
+    player_dict = OrderedDict()
+    for p in sorted(player_list, key=lambda k: k.name.lower()):
+        if bf4db_up:
             time.sleep(0.3)
             try:
-                bf4db_json = json_query(bf4db_url + x)
-                player_dict[x] = bf4db_json['data']
+                bf4db_json = json_query(bf4db_url + p.name)
+                player_dict[p] = bf4db_json['data']
                 if debug:
-                    print x + ' ' + str(player_dict[x]['cheatscore'])
-            except:
+                    print p.name, player_dict[p]['cheatscore']
+            except Exception as ex:
                 bf4db_up = False
+                if debug:
+                    print ex, ex.args[0]
         else:
             # reset the player dictionary since bf4db is down
             player_dict = {}
@@ -213,64 +255,31 @@ def write_file(filename, text):
         f.write(text.encode('utf-8'))
 
 
-def write_template(player_count, current_map, current_mode, player_data, server_name, file_dir, refresh):
+def write_template(player_count, current_map, current_mode, player_data,
+        server_name, file_dir, refresh):
     # Our template. Could just as easily be stored in a separate file
-    template = """
-    <!DOCTYPE html>
-    <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta http-equiv="refresh" content="{{refresh}}" >
-            <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/{{bootstrap_version}}/css/bootstrap.min.css">
-            <title>{{server_name}}</title>
-        </head>
-        <body>
-            <div class="container">
-                <h3>{{player_count}} player(s) on {{current_map}} {{current_mode}}</h3>
-                <table class="table table-striped table-condensed">
-                    <tr>
-                        <th>Player</th>
-                        <th>Cheat Score</th>
-                        <th>Player</th>
-                        <th>Cheat Score</th>
-                    </tr>
-                    {% for key, value in player_data.items %}
-                    {% cycle 0 1 as cycle_num silent %}
-                    {% if cycle_num == 0 %}
-                    <tr>
-                    {% endif %}
-                        <td><a href="http://battlelog.battlefield.com/bf4/soldier/{{key}}/stats/{{value.personaId}}/pc/">{{key}}</a></td>
-                        {% if value.cheatscore < 1 or value.cheatscore == None %}
-                            <td><a href="{{value.bf4db_url}}" class="btn btn-xs btn-default">{{value.cheatscore}}</a></td>
-                        {% elif value.cheatscore < 60 %}
-                            <td class="warning"><a href="{{value.bf4db_url}}" class="btn btn-xs btn-warning">{{value.cheatscore}}</a></td>
-                        {% else %}
-                            <td class="danger"><a href="{{value.bf4db_url}}" class="btn btn-xs btn-danger">{{value.cheatscore}}</a></td>
-                        {% endif %}
-                    {% if cycle_num == 1 %}
-                    </tr>
-                    {% endif %}
-                    {% endfor %}
-                </table>
-                <p>Last updated at {{update_time}} UTC</p>
-            </div>
-            <script src="https://code.jquery.com/jquery.js"></script>
-            <script src="https://netdna.bootstrapcdn.com/bootstrap/{{bootstrap_version}}/js/bootstrap.min.js"></script>
-        </body>
-    </html>
-    """
     write_file(os.path.join(file_dir, 'player_count.html'), player_count)
     update_time = time.strftime('%H:%M:%S %m/%d/%Y')
     t = Template(template)
-    c = Context({"player_count": player_count,
-                 "current_map": current_map,
-                 "current_mode": current_mode,
-                 "refresh": refresh,
-                 "update_time": update_time,
-                 "player_data": player_data,
-                 "server_name": server_name,
-                 "bootstrap_version": '3.3.1'})
-    write_file(os.path.join(file_dir, 'index.html'), t.render(c))
+    team1_players = OrderedDict()
+    team2_players = OrderedDict()
+    for player in player_data:
+        if player.teamId == '1':
+            team1_players[player] = player_data[player]
+        elif player.teamId == '2':
+            team2_players[player] = player_data[player]
+    context = {
+        "player_count": player_count,
+        "current_map": current_map,
+        "current_mode": current_mode,
+        "refresh": refresh,
+        "update_time": update_time,
+        "team1_players": team1_players,
+        "team2_players": team2_players,
+        "server_name": server_name,
+        "bootstrap_version": '3.3.1',
+    }
+    write_file(os.path.join(file_dir, 'index.html'), t.render(**context))
 
 
 def _main():
@@ -280,18 +289,18 @@ def _main():
     process_lock.get_lock('bf4_server_status.py')
     refresh = 60
     bf4db_url = 'http://api.bf4db.com/api-player.php?format=json&name='
-    # We have to do this to use django templates standalone - see
-    # http://stackoverflow.com/questions/98135/how-do-i-use-django-templates-without-the-rest-of-django
-    settings.configure()
-    little_player_list, player_count, current_map, current_mode, server_name = server_status(cmdline.address, cmdline.server_port, cmdline.debug)
-    player_data = bf4db_query(little_player_list, bf4db_url, cmdline.debug)
+    player_list, player_count, current_map, current_mode, server_name = server_status(
+        cmdline.address, cmdline.server_port, cmdline.debug)
+    player_data = bf4db_query(player_list, bf4db_url, cmdline.debug)
     # Get a sorted list of keys based on cheatscore first, then the player name
-    player_data_sorted_keys = sorted(player_data.keys(), key=lambda k: str(player_data[k]['cheatscore']) + str(k).lower())
+    player_data_sorted_keys = sorted(player_data.keys(),
+        key=lambda k: '%d%s' % (player_data[k]['cheatscore'], k.name.lower()))
     # rebuild player_data based on the sorted keys
     sorted_player_data = OrderedDict()
     for sorted_player in player_data_sorted_keys:
         sorted_player_data[sorted_player] = player_data[sorted_player]
-    write_template(player_count, current_map, current_mode, sorted_player_data, server_name, cmdline.file_dir, refresh)
+    write_template(player_count, current_map, current_mode, sorted_player_data, server_name,
+        cmdline.file_dir, refresh)
 
 if __name__ == '__main__':
     _main()

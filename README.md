@@ -15,6 +15,6 @@ optional arguments:
   -d                    show debug info in terminal
   -p PORT, --port PORT  Server port number</pre>
   
-Installation:
+Installation (in a virtualenv with a reasonably recent version of pip):
 * `git clone --recursive https://github.com/robled/bf4-server-status.git`
-* `pip install django pbr`
+* `pip install -Ur requirements.txt`
