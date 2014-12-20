@@ -3,7 +3,7 @@
 import socket
 import sys
 from collections import namedtuple, OrderedDict
-from lib.frostbite_wire.packet import Packet
+from frostbite_wire.packet import Packet
 import argparse
 import json
 import os
@@ -11,9 +11,7 @@ import requests
 import socket
 import sys
 import time
-from django.template import Template, Context
-from django.conf import settings
-from django.utils.datastructures import SortedDict
+from jinja2 import Template
 
 
 class CommandLine:
@@ -190,7 +188,7 @@ def json_query(json_url):
 
 def bf4db_query(player_list, bf4db_url, debug=False):
     bf4db_up = True
-    player_dict = SortedDict()
+    player_dict = OrderedDict()
     for x in sorted(player_list, key=lambda s: s.lower()):
         if bf4db_up == True:
             time.sleep(0.3)
@@ -234,8 +232,8 @@ def write_template(player_count, current_map, current_mode, player_data, server_
                         <th>Player</th>
                         <th>Cheat Score</th>
                     </tr>
-                    {% for key, value in player_data.items %}
-                    {% cycle 0 1 as cycle_num silent %}
+                    {% for key, value in player_data.items() %}
+                    {% set cycle_num = loop.cycle(0, 1) %}
                     {% if cycle_num == 0 %}
                     <tr>
                     {% endif %}
@@ -262,15 +260,15 @@ def write_template(player_count, current_map, current_mode, player_data, server_
     write_file(os.path.join(file_dir, 'player_count.html'), player_count)
     update_time = time.strftime('%H:%M:%S %m/%d/%Y')
     t = Template(template)
-    c = Context({"player_count": player_count,
+    context = {"player_count": player_count,
                  "current_map": current_map,
                  "current_mode": current_mode,
                  "refresh": refresh,
                  "update_time": update_time,
                  "player_data": player_data,
                  "server_name": server_name,
-                 "bootstrap_version": '3.3.1'})
-    write_file(os.path.join(file_dir, 'index.html'), t.render(c))
+                 "bootstrap_version": '3.3.1'}
+    write_file(os.path.join(file_dir, 'index.html'), t.render(**context))
 
 
 def _main():
@@ -280,9 +278,6 @@ def _main():
     process_lock.get_lock('bf4_server_status.py')
     refresh = 60
     bf4db_url = 'http://api.bf4db.com/api-player.php?format=json&name='
-    # We have to do this to use django templates standalone - see
-    # http://stackoverflow.com/questions/98135/how-do-i-use-django-templates-without-the-rest-of-django
-    settings.configure()
     little_player_list, player_count, current_map, current_mode, server_name = server_status(cmdline.address, cmdline.server_port, cmdline.debug)
     player_data = bf4db_query(little_player_list, bf4db_url, cmdline.debug)
     # Get a sorted list of keys based on cheatscore first, then the player name
