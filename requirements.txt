@@ -1,4 +1,4 @@
-django
+Jinja2
 pbr
 requests
--e git+https://github.com/seandst/frostbite-wire.git#egg=frostbite-wire
+-e git+https://github.com/DontCamp/frostbite-wire.git#egg=frostbite-wire
