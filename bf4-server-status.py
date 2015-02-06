@@ -237,6 +237,10 @@ def bf4db_query(player_list, bf4db_url, debug=False):
             try:
                 bf4db_json = json_query(bf4db_url + p.name)
                 player_dict[p] = bf4db_json['data']
+                # Sometimes we can't get a cheatscore.  If so, set to 
+                # -1 so that the table can still be created and sorted.
+                if player_dict[p]['cheatscore'] is None:
+                    player_dict[p]['cheatscore'] = -1
                 if debug:
                     print p.name, player_dict[p]['cheatscore']
             except Exception as ex:
