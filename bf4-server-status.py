@@ -33,7 +33,7 @@ template = """
                         </tr>
                         {% for key, value in player_data.items() %}
                         <tr>
-                            <td><a href="http://battlelog.battlefield.com/bf4/soldier/{{key.name}}/stats/{{value.personaId}}/pc/">{{key.name}}</a></td>
+                            <td><a href="{{value.bf4db_url}}">{{key.name}}</a></td>
                             {% if value.cheatscore < 1 or value.cheatscore == None %} {% set level="default" %}
                             {% elif value.cheatscore < 60 %} {% set level="warning" %}
                             {% else %} {% set level="danger" %}
