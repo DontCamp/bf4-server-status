@@ -51,6 +51,7 @@ template = """
             {% endfor %}
         </div>
         <div class="container text-center">
+            <p><a href="https://www.dontcamp.com/teamspeak_monitor.html">TeamSpeak Monitor</a> | <a href="https://www.dontcamp.com/forums/">Forums</a></p>
             <p>Last updated at {{update_time}} UTC</p>
         </div>
         <script src="https://code.jquery.com/jquery.js"></script>
