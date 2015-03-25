@@ -131,7 +131,16 @@ def server_status(address, server_port=None, debug=False):
                  'XP4_Arctic': 'Operation Whiteout',
                  'XP4_SubBase': 'Hammerhead',
                  'XP4_Titan': 'Hangar 21',
-                 'XP4_WlkrFtry': 'Giants of Karelia'}
+                 'XP4_WlkrFtry': 'Giants of Karelia',
+                 'MP_Bank': 'Bank Job',
+                 'MP_Bloodout': 'The Block',
+                 'MP_Desert05': 'Dustbowl',
+                 'MP_Downtown': 'Downtown',
+                 'MP_Eastside': 'Derailed',
+                 'MP_Glades': 'Everglades',
+                 'MP_Growhouse': 'Growhouse',
+                 'MP_Hills': 'Hollywood Heights',
+                 'MP_OffShore': 'Riptide'}
 
     # Mapping engine map modes to human-readable names
     game_modes = {'AirSuperiority0': 'Air Superiority',
@@ -146,6 +155,13 @@ def server_status(address, server_port=None, debug=False):
                   'Obliteration': 'Obliteration',
                   'RushLarge0': 'Rush',
                   'SquadDeathMatch0': 'Squad DM',
+                  'TurfWarLarge0': 'Conquest Large',
+                  'TurfWarSmall0': 'Conquest Small',
+                  'Heist0': 'Heist',
+                  'Hotwire0': 'Hotwire',
+                  'BloodMoney0': 'Blood Money',
+                  'Hit0': 'Crosshair',
+                  'Hostage0': 'Rescue',
                   'TeamDeathMatch0': 'Team DM'}
 
     def recv(sock):
@@ -238,7 +254,7 @@ def bf4db_query(player_list, bf4db_url, debug=False):
             try:
                 bf4db_json = json_query(bf4db_url + p.name)
                 player_dict[p] = bf4db_json['data']
-                # Sometimes we can't get a cheatscore.  If so, set to 
+                # Sometimes we can't get a cheatscore.  If so, set to
                 # -1 so that the table can still be created and sorted.
                 if player_dict[p]['cheatscore'] is None:
                     player_dict[p]['cheatscore'] = -1
