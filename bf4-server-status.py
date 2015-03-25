@@ -307,7 +307,7 @@ def _main():
     cmdline = CommandLine()
     cmdline.cmdline()
     process_lock = ProcessLock()
-    process_lock.get_lock('bf4_server_status.py')
+    process_lock.get_lock(os.path.basename(__file__))
     refresh = 60
     bf4db_url = 'http://api.bf4db.com/api-player.php?format=json&name='
     player_list, player_count, current_map, current_mode, server_name = server_status(
