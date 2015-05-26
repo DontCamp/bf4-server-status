@@ -162,7 +162,8 @@ def server_status(address, server_port=None, debug=False):
                   'BloodMoney0': 'Blood Money',
                   'Hit0': 'Crosshair',
                   'Hostage0': 'Rescue',
-                  'TeamDeathMatch0': 'Team DM'}
+                  'TeamDeathMatch0': 'Team DM',
+                  'GunMaster0': 'Gun Master'}
 
     def recv(sock):
         # Pull enough to get the int headers and instantiate a Packet
